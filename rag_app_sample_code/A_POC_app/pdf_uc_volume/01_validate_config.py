@@ -31,9 +31,7 @@ browser_url = du.get_browser_hostname()
 # MAGIC If not, creates:
 # MAGIC - UC Catalog & Schema
 # MAGIC - Vector Search Endpoint
-# MAGIC - Folder within UC Volume for streaming checkpoints
-# MAGIC
-# MAGIC `SOURCE_PATH` will NOT be created, but existance is verified.
+# MAGIC - Source Path
 
 # COMMAND ----------
 
@@ -43,8 +41,28 @@ import os
 if os.path.isdir(SOURCE_PATH):
     print(f"PASS: `{SOURCE_PATH}` exists")
 else:
-    print(f"FAIL: `{SOURCE_PATH}` does NOT exist")
-    raise ValueError("Please verify that `{SOURCE_PATH}` is a valid UC Volume")
+    print(f"`{SOURCE_PATH}` does NOT exist, trying to create")
+
+    from databricks.sdk import WorkspaceClient
+    from databricks.sdk.service import catalog
+    from databricks.sdk.errors import ResourceAlreadyExists
+
+    w = WorkspaceClient()
+
+    volume_name = SOURCE_PATH[9:].split('/')[2]
+    uc_catalog = SOURCE_PATH[9:].split('/')[0]
+    uc_schema = SOURCE_PATH[9:].split('/')[1]
+    try:
+        created_volume = w.volumes.create(
+            catalog_name=uc_catalog,
+            schema_name=uc_schema,
+            name=volume_name,
+            volume_type=catalog.VolumeType.MANAGED,
+        )
+        print(f"PASS: Created `{SOURCE_PATH}`")
+    except Exception as e:
+        print(f"`FAIL: {SOURCE_PATH}` does NOT exist, could not create due to {e}")
+        raise ValueError("Please verify that `{SOURCE_PATH}` is a valid UC Volume")
 
 # COMMAND ----------
 
