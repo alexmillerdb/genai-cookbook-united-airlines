@@ -1,17 +1,9 @@
 # Databricks notebook source
-# MAGIC %md # POC configuration
-
-# COMMAND ----------
-
 # MAGIC %pip install -U -qqqq pyyaml mlflow mlflow-skinny
 
 # COMMAND ----------
 
-import mlflow
-
-# COMMAND ----------
-
-# %run ../../00_global_config
+# MAGIC %md # POC configuration
 
 # COMMAND ----------
 
@@ -34,8 +26,6 @@ import mlflow
 # By default, will use the current user name to create a unique UC catalog/schema & vector search endpoint
 user_email = spark.sql("SELECT current_user() as username").collect()[0].username
 user_name = user_email.split("@")[0].replace(".", "").lower()[:35]
-
-# COMMAND ----------
 
 dbutils.widgets.text(name="RAG_APP_NAME", defaultValue="united_airlines_rag_app", label="Application Name (must be unique)")
 dbutils.widgets.text(name="UC_CATALOG", defaultValue="main", label="UC Catalog Name")
@@ -69,6 +59,7 @@ EVALUATION_SET_FQN = f"`{UC_CATALOG}`.`{UC_SCHEMA}`.{RAG_APP_NAME}_evaluation_se
 
 # MLflow experiment name
 # Using the same MLflow experiment for a single app allows you to compare runs across Notebooks
+import mlflow
 MLFLOW_EXPERIMENT_NAME = f"/Users/{user_email}/{RAG_APP_NAME}"
 mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 
@@ -76,9 +67,9 @@ mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
 # These Runs will store your initial POC application.  They are later used to evaluate the POC model against your experiments to improve quality.
 
 # Data pipeline MLflow run name
-POC_DATA_PIPELINE_RUN_NAME = "data_pipeline_poc_united_airlines"
+POC_DATA_PIPELINE_RUN_NAME = f"data_pipeline_{RAG_APP_NAME}"
 # Chain MLflow run name
-POC_CHAIN_RUN_NAME = "poc_united_airlines"
+POC_CHAIN_RUN_NAME = f"chain_{RAG_APP_NAME}"
 
 # COMMAND ----------
 
@@ -117,9 +108,9 @@ print(f"POC app using the UC catalog/schema {UC_CATALOG}.{UC_SCHEMA} with source
 
 # COMMAND ----------
 
-dbutils.widgets.dropdown("embedding_endpoint_name", "databricks-gte-large-en", 
-                         choices=["databricks-gte-large-en", "databricks-bge-large-en"],
-                         label="Embedding endpoint name")
+dbutils.widgets.text("embedding_endpoint_name", 
+                     defaultValue="databricks-gte-large-en",
+                     label="Embedding endpoint name")
 
 embedding_endpoint_name = dbutils.widgets.get("embedding_endpoint_name")
 
@@ -133,11 +124,13 @@ print(f"Tokenizer model name: {tokenizer_model_name}")
 
 # COMMAND ----------
 
-dbutils.widgets.text("chunk_size_tokens", "1024", label="Chunk size for documents")
-dbutils.widgets.text("chunk_overlap_tokens", "256", label="Chunk size for overlap of documents")
+# dbutils.widgets.text("chunk_size_tokens", "1024", label="Chunk size for documents")
+# dbutils.widgets.text("chunk_overlap_tokens", "256", label="Chunk size for overlap of documents")
 
-chunk_size_tokens = int(dbutils.widgets.get("chunk_size_tokens"))
-chunk_overlap_tokens = int(dbutils.widgets.get("chunk_overlap_tokens"))
+# chunk_size_tokens = int(dbutils.widgets.get("chunk_size_tokens"))
+# chunk_overlap_tokens = int(dbutils.widgets.get("chunk_overlap_tokens"))
+chunk_size_tokens = 1024
+chunk_overlap_tokens = 256
 
 print(f"Chunk size {chunk_size_tokens} with chunk overlap of {chunk_overlap_tokens}")
 
@@ -176,7 +169,7 @@ data_pipeline_config = {
             "name": "langchain_recursive_char",
             "config": {
                 "chunk_size_tokens": chunk_size_tokens,
-                "chunk_overlap_tokens": 256,
+                "chunk_overlap_tokens": chunk_overlap_tokens,
             },
         },
     },
@@ -260,9 +253,9 @@ CHAIN_CODE_FILE = "multi_turn_rag_chain"
 
 # COMMAND ----------
 
-dbutils.widgets.dropdown("llm_endpoint_name", "databricks-meta-llama-3-1-70b-instruct", 
-                         choices=["databricks-meta-llama-3-1-70b-instruct", "databricks-dbrx-instruct"],
-                         label="LLM Endpoint Name")
+dbutils.widgets.text("llm_endpoint_name", 
+                     defaultValue="databricks-meta-llama-3-1-70b-instruct",
+                     label="LLM Endpoint Name")
 
 llm_endpoint_name = dbutils.widgets.get("llm_endpoint_name")
 

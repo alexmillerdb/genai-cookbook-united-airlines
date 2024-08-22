@@ -9,12 +9,10 @@ llm_config:
   llm_parameters:
     max_tokens: 1500
     temperature: 0.01
-  llm_system_prompt_template: "You are an assistant that answers questions. Use the
-    following pieces of retrieved context to answer the question. Some pieces of context
-    may be irrelevant, in which case you should not use them to form the answer.
-
-
-    Context: {context}"
+  llm_system_prompt_template: "You are an assistant that answers questions. Use the\
+    \ following pieces of retrieved context to answer the question. Some pieces of\
+    \ context may be irrelevant, in which case you should not use them to form the\
+    \ answer.\n                     \n                     Context: {context}"
 retriever_config:
   chunk_template: 'Passage: {chunk_text}
 
