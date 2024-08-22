@@ -116,8 +116,14 @@ embedding_endpoint_name = dbutils.widgets.get("embedding_endpoint_name")
 
 if "gte-large-en" in embedding_endpoint_name:
   tokenizer_model_name = "Alibaba-NLP/gte-large-en-v1.5"
+  tokenizer_source = "hugging_face"
 elif "bge-large-en" in embedding_endpoint_name:
   tokenizer_model_name = "BAAI/bge-large-en-v1.5"
+  tokenizer_source = "hugging_face"
+else:
+  tokenizer_model_name = "cl100k_base"
+  tokenizer_source = "tiktoken"
+
 
 print(f"Embedding endpoint name: {embedding_endpoint_name}")
 print(f"Tokenizer model name: {tokenizer_model_name}")
@@ -153,7 +159,7 @@ data_pipeline_config = {
             # Name of the embedding model that the tokenizer recognizes
             "tokenizer_model_name": tokenizer_model_name,
             # Name of the tokenizer, either `hugging_face` or `tiktoken`
-            "tokenizer_source": "hugging_face",
+            "tokenizer_source": tokenizer_source,
         },
     },
     # Parsing and chunking configuration

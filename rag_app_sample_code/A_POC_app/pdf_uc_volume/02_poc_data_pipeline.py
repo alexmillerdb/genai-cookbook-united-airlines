@@ -283,7 +283,10 @@ def chunk_parsed_content_langrecchar(
             embedding_config.get("embedding_tokenizer").get("tokenizer_source")
             == "tiktoken"
         ):
-            tokenizer = tiktoken.encoding_for_model(
+            # tokenizer = tiktoken.encoding_for_model(
+            #     embedding_config.get("embedding_tokenizer").get("tokenizer_model_name")
+            # )
+            tokenizer = tiktoken.get_encoding(
                 embedding_config.get("embedding_tokenizer").get("tokenizer_model_name")
             )
 
