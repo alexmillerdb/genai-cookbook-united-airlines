@@ -289,6 +289,8 @@ rag_chain_config = {
     "retriever_config": {
         # Vector Search index that is created by the data pipeline
         "vector_search_index": destination_tables_config["vectorsearch_index_name"],
+        "embedding_endpoint_name": embedding_endpoint_name,
+        # "embedding_dimension": 1024,
         "schema": {
             # The column name in the retriever's response referred to the unique key
             # If using Databricks vector search with delta sync, this should the column of the delta table that acts as the primary key

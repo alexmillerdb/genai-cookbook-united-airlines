@@ -18,6 +18,8 @@ retriever_config:
 
     '
   data_pipeline_tag: poc
+  embedding_dimension: 1024
+  embedding_endpoint_name: databricks-gte-large-en
   parameters:
     k: 5
     query_type: ann

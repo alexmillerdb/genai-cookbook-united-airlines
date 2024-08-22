@@ -347,6 +347,32 @@ chunker_udf = func.udf(
 
 # COMMAND ----------
 
+from mlflow.deployments import get_deploy_client
+from pyspark.sql import functions as F
+import pandas as pd
+
+@F.pandas_udf("array<float>")
+def get_embedding(contents: pd.Series) -> pd.Series:
+    import mlflow.deployments
+    deploy_client = mlflow.deployments.get_deploy_client("databricks")
+    def get_embeddings(batch):
+        #Note: this will fail if an exception is thrown during embedding creation (add try/except if needed) 
+        response = deploy_client.predict(endpoint=embedding_config.get("embedding_endpoint_name"), inputs={"input": batch})
+        return [e['embedding'] for e in response.data]
+
+    # Splitting the contents into batches of 150 items each, since the embedding model takes at most 150 inputs per request.
+    max_batch_size = 150
+    batches = [contents.iloc[i:i + max_batch_size] for i in range(0, len(contents), max_batch_size)]
+
+    # Process each batch and collect the results
+    all_embeddings = []
+    for batch in batches:
+        all_embeddings += get_embeddings(batch.tolist())
+
+    return pd.Series(all_embeddings)
+
+# COMMAND ----------
+
 # Run the chunker
 chunked_files_df = parsed_files_df.withColumn(
     "chunked",
@@ -366,7 +392,8 @@ chunked_files_df = chunked_files_df.filter(chunked_files_df.chunked.chunker_stat
     "path",
     func.explode("chunked.chunked_text").alias("chunked_text"),
     func.md5(func.col("chunked_text")).alias("chunk_id")
-)
+) \
+    .withColumn("embedding", get_embedding("chunked_text"))
 
 # Write to Delta Table
 chunked_files_df.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable(
@@ -387,6 +414,12 @@ display(chunked_files_df)
 tag_delta_table(destination_tables_config["chunked_docs_table_name"], data_pipeline_config)
 
 mlflow.log_input(mlflow.data.load_delta(table_name=destination_tables_config.get("chunked_docs_table_name")), context="chunked_docs")
+
+# COMMAND ----------
+
+chunked_files_df = spark.table(destination_tables_config["chunked_docs_table_name"])
+embedding_dimension = chunked_files_df.selectExpr("size(embedding)").limit(1).collect()[0][0]
+embedding_dimension
 
 # COMMAND ----------
 
@@ -429,7 +462,9 @@ if create_index:
         source_table_name=destination_tables_config["chunked_docs_table_name"].replace("`", ""),
         pipeline_type=vectorsearch_config['pipeline_type'],
         embedding_source_column="chunked_text",
-        embedding_model_endpoint_name=embedding_config['embedding_endpoint_name']
+        embedding_dimension=embedding_dimension,
+        embedding_vector_column="embedding"
+        # embedding_model_endpoint_name=embedding_config['embedding_endpoint_name']
     )
 
 tag_delta_table(destination_tables_config["vectorsearch_index_table_name"], data_pipeline_config)
@@ -458,8 +493,18 @@ print(f"Gold Delta Table w/ chunked files: {get_table_url(destination_tables_con
 
 # COMMAND ----------
 
-# DBTITLE 1,Testing the Index
-index.similarity_search(columns=["chunked_text", "chunk_id", "path"], query_text="What is the baggage claim ETA model?")
+import mlflow.deployments
+deploy_client = mlflow.deployments.get_deploy_client("databricks")
+
+question = "What is the baggage claim ETA model?"
+response = deploy_client.predict(endpoint=embedding_endpoint_name, inputs={"input": [question]})
+embeddings = [e['embedding'] for e in response.data]
+
+results = vsc.get_index(VECTOR_SEARCH_ENDPOINT, destination_tables_config["vectorsearch_index_name"]).similarity_search(
+  query_vector=embeddings[0],
+  columns=["chunked_text", "chunk_id", "path"],
+  num_results=5)
+results
 
 # COMMAND ----------
 
