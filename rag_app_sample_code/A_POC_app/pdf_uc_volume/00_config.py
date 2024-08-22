@@ -121,8 +121,9 @@ elif "bge-large-en" in embedding_endpoint_name:
   tokenizer_model_name = "BAAI/bge-large-en-v1.5"
   tokenizer_source = "hugging_face"
 else:
-  tokenizer_model_name = "cl100k_base"
-  tokenizer_source = "tiktoken"
+  # tokenizer_model_name = "cl100k_base"
+  tokenizer_model_name = ""
+  tokenizer_source = ""
 
 
 print(f"Embedding endpoint name: {embedding_endpoint_name}")
